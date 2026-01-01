@@ -1,1 +1,12 @@
+import pyttsx3
 
+engine = pyttsx3.init()
+
+def speak(text):
+    # מגדיר קצב דיבור וקול
+    engine.setProperty('rate', 150) 
+    engine.say(text)
+    engine.runAndWait()
+
+# עכשיו, בתוך הלולאה של הרובוט, במקום רק print, תוסיף:
+# speak(reply)
