@@ -1,11 +1,13 @@
-# Human-Like AI Robot 🤖
-.
+# Alex: The Human-Like AI Robot 🤖
 
-#:
-*.
-* יכולת דיבור (Text-to-Speech).
-* ה.
+אלכס הוא רובוט מבוסס פייתון שנועד לתקשר בצורה אנושית, עם אישיות ייחודית ויכולת דיבור.
 
-## איך מריצים?
-1. מתקינים דרישות: `pip install -r requirements.txt`
-2. מריצים את הקובץ: `python main.py`
+## ✨ תכונות
+- *brain
+- memory
+- .
+
+## 🚀 איך להתחיל?
+1. שכפל את המאגר: `git clone https://github.com/YOUR_USER/alex-robot.git`
+2. התקן דרישות: `pip install -r requirements.txt`
+3. הרץ: `python robot.py`
