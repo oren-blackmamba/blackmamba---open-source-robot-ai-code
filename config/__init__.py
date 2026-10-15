@@ -1,0 +1,1 @@
+"""Shared configuration for HUMANIS."""

@@ -1,0 +1,43 @@
+# HUMANIS simulation configuration.
+#
+# IMPORTANT: every number below is an ASSUMED design parameter used by the
+# software models. None of them has been measured on real hardware. Replace
+# them with measured values as soon as a physical prototype exists.
+
+robot:
+  name: HUMANIS-sim
+  mass_kg: 70
+  height_m: 1.75
+
+battery:
+  capacity_wh: 3000        # assumed pack size (a ~15 kg class pack)
+  initial_soc: 1.0
+  reserve_fraction: 0.10   # energy never used for work (battery protection)
+
+power_w:                   # average electrical power per activity
+  standing: 70
+  walking: 220             # at the nominal walking speed
+  manipulating: 180
+  gesture: 100
+  low_power: 45
+  compute_idle: 25
+  compute_active: 60
+  sensors: 20
+
+motion:
+  nominal_walk_speed_m_s: 1.0
+  com_height_m: 0.9
+
+safety:
+  max_joint_speed_rad_s: 3.0
+  max_walk_speed_m_s: 1.4
+  max_tilt_deg: 25
+  min_soc_to_work: 0.10    # keep equal to battery.reserve_fraction
+  max_battery_temp_c: 55
+
+sim:
+  ambient_temp_c: 25
+  charge_power_w: 1500
+
+targets:
+  operating_hours: 12

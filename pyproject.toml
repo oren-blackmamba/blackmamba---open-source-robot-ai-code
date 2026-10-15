@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "humanis"
+version = "0.1.0"
+description = "Open-source humanoid robotics platform: AI planning, motion, perception, energy management and safety."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6"]
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.40"]
+dev = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["ai_core", "perception", "motion", "control", "energy", "safety", "config",
+            "simulation", "simulation.robot_model", "simulation.environments",
+            "simulation.scenarios"]
+
+[tool.setuptools.package-data]
+config = ["robot_config.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

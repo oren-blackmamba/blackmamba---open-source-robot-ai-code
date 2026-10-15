@@ -479,11 +479,27 @@ These commands describe the intended setup workflow. They will become fully usab
 
 ## 📌 13. Current Development Status
 
-**Project stage:** Initial concept and architecture.
+**Project stage:** Working software foundation, running in simulation (no physical hardware yet).
 
-The repository defines the intended direction for a long-term humanoid robotics research and development effort.
+**Implemented and tested (55 automated tests):**
 
-The proposed modules, directory structure, and roadmap are architectural plans. Individual capabilities will be marked as implemented only after working code and appropriate tests are available.
+- AI core: goal understanding in Hebrew and English, task planning, clarification questions, episodic memory, and a pluggable language-model brain (`ai_core/llm_brain.py`) whose output is validated before use.
+- Perception: simulated camera, object detection, occupancy-grid mapping, sensor-fusion filters.
+- Motion: A* path planning, gait generation, balance control model, gestures within joint limits.
+- Energy: battery model with protected reserve, per-activity power model, energy-aware decisions, runtime planning.
+- Safety: command validation, latched emergency stop, state monitoring, watchdog.
+- Simulation: an indoor environment and a full 12-hour work-shift scenario.
+
+Try it:
+
+```bash
+pip install -e ".[dev]"
+python -m pytest
+python examples/basic_agent.py
+python examples/energy_estimation.py
+```
+
+The 12-hour shift completes in simulation **using assumed power values** in `config/robot_config.yaml`. See [docs/energy_strategy.md](docs/energy_strategy.md). Anything not listed above remains a plan.
 
 The project does not currently claim demonstrated human-level intelligence, fully human-like physical behavior, or verified 12-hour continuous operation.
 
