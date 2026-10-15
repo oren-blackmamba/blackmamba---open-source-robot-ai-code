@@ -37,6 +37,10 @@ class SimulatedCamera:
         self.miss_rate = miss_rate
         self._rng = random.Random(seed)
 
+    def set_objects(self, world_objects: Sequence[tuple[str, float, float]]) -> None:
+        """Update what is in the world (objects were moved, picked up or put down)."""
+        self._objects = list(world_objects)
+
     def capture(self, pose: tuple[float, float, float], timestamp_s: float = 0.0,
                 sweep: bool = False) -> Frame:
         """Capture a frame. ``sweep=True`` simulates turning on the spot (360 degrees)."""

@@ -481,14 +481,14 @@ These commands describe the intended setup workflow. They will become fully usab
 
 **Project stage:** Working software foundation, running in simulation (no physical hardware yet).
 
-**Implemented and tested (55 automated tests):**
+**Implemented and tested (67 automated tests):**
 
-- AI core: goal understanding in Hebrew and English, task planning, clarification questions, episodic memory, and a pluggable language-model brain (`ai_core/llm_brain.py`) whose output is validated before use.
+- AI core: goal understanding in Hebrew and English, task planning, a dialogue manager (answers questions such as "where is the cup?" and understands follow-ups such as "bring it to the kitchen"), clarification questions, episodic memory, and a pluggable language-model brain (`ai_core/llm_brain.py`) whose output is validated before use.
 - Perception: simulated camera, object detection, occupancy-grid mapping, sensor-fusion filters.
-- Motion: A* path planning, gait generation, balance control model, gestures within joint limits.
+- Motion: A* path planning, gait generation, balance control model, and minimum-jerk gestures (the smooth speed profile of human reaching) within joint limits.
 - Energy: battery model with protected reserve, per-activity power model, energy-aware decisions, runtime planning.
 - Safety: command validation, latched emergency stop, state monitoring, watchdog.
-- Simulation: an indoor environment and a full 12-hour work-shift scenario.
+- Simulation: an indoor environment where carried objects really move and are remembered, and a full 12-hour work-shift scenario.
 
 Try it:
 
@@ -521,7 +521,12 @@ The challenge is not merely to build a machine with a human shape. It is to inte
 
 ## License
 
-The project's open-source license will be selected before the first public software release. The license should clearly define how the software may be used, modified, and redistributed.
+HUMANIS is released under the [Apache License 2.0](LICENSE). In short:
+
+- You may use, modify, and distribute the software, including in commercial products.
+- Contributors grant an express patent license, and you must keep the copyright and license notices (see [NOTICE](NOTICE)).
+- The license does not grant rights to the HUMANIS name or logo.
+- The software is provided "as is", without warranty. It is not certified for use around people. See [docs/safety_design.md](docs/safety_design.md).
 
 ## Disclaimer
 

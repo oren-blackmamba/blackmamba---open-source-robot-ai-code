@@ -18,9 +18,11 @@ from control.robot_interface import SimulatedRobot
 from simulation.environments.home_environment import HomeEnvironment
 
 GOALS = [
-    "תביא לי את הכוס מהמטבח לסלון",
-    "bring the toolbox to the bedroom",
+    "where is the cup?",
+    "bring it to the bedroom",
+    "איפה הכוס?",
     "wave hello",
+    "how much battery do you have?",
     "do something",
 ]
 
@@ -38,6 +40,8 @@ def main() -> None:
         print(f"\n> {goal}")
         print(f"  {result.status}: {result.steps_done}/{result.steps_total} steps, "
               f"{result.duration_s:.0f} s, {result.energy_wh:.2f} Wh")
+        if result.status == "answered":
+            print(f"  robot says: {result.message}")
         if result.clarification:
             print(f"  robot asks: {result.clarification}")
 

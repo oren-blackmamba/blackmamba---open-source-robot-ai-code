@@ -29,6 +29,7 @@ Nothing the AI says can skip that check.
 | `task_planner.py` | Hebrew/English goal parsing, task decomposition, time and energy estimates |
 | `reasoning.py` | Confidence and clarification questions (asks instead of guessing) |
 | `decision_engine.py` | Energy-aware approval with a safety margin; stand-by vs. low power pacing |
+| `dialogue.py` | Answers questions (where is X, battery, what did you do) and resolves follow-ups ("bring *it*") |
 | `memory.py` | Episodic memory, facts and last-seen object positions |
 
 ### Using a language model as the brain
@@ -47,6 +48,9 @@ The model name comes from `HUMANIS_LLM_MODEL`.
 - `ai_core.llm_brain.LLMClient` — `complete(system, user) -> str`; any model provider.
 
 ## What is modelled and what is not
+
+The world is persistent: objects the robot carries really move, so later requests and questions
+reflect what it did. Gestures use minimum-jerk trajectories (the speed profile of human reaching).
 
 Modelled: time, distance, energy per activity, battery reserve and temperature, collision-free
 paths, a linear-inverted-pendulum balance response, keyframed gestures within joint limits.

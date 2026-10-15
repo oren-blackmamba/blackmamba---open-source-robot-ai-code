@@ -10,9 +10,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from perception.environment_mapping import OccupancyGrid
+
+
+CARRIED = "carried"
 
 
 @dataclass(frozen=True)
@@ -70,7 +73,31 @@ class HomeEnvironment:
         return None
 
     def world_objects(self) -> list[tuple[str, float, float]]:
-        return [(item.label, item.x, item.y) for item in self.objects]
+        """Objects lying in the world (not the one being carried)."""
+        return [(item.label, item.x, item.y) for item in self.objects if item.place != CARRIED]
+
+    def _update(self, label: str, place: str, x: float, y: float) -> None:
+        for i, item in enumerate(self.objects):
+            if item.label == label:
+                self.objects[i] = replace(item, place=place, x=x, y=y)
+                return
+        raise KeyError(f"Unknown object {label!r}")
+
+    def pick_up(self, label: str, x: float, y: float) -> None:
+        """The robot takes the object; it is no longer lying in the world."""
+        self._update(label, CARRIED, x, y)
+
+    def put_down(self, label: str, x: float, y: float) -> str:
+        """Place the object at (x, y). Returns the name of the nearest known place."""
+        place = min(self.places, key=lambda name: (self.places[name][0] - x) ** 2
+                    + (self.places[name][1] - y) ** 2)
+        self._update(label, place, x, y)
+        return place
+
+    def local_name(self, key: str, objects: bool = False) -> str:
+        """Hebrew display name of a place or object (falls back to the English key)."""
+        aliases = (self.object_aliases if objects else self.place_aliases).get(key, [key])
+        return next((a for a in aliases if not a.isascii()), key)
 
     def build_grid(self) -> OccupancyGrid:
         """The robot's map: outer walls, interior walls with doorways, furniture."""

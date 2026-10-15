@@ -7,6 +7,8 @@ name = "humanis"
 version = "0.1.0"
 description = "Open-source humanoid robotics platform: AI planning, motion, perception, energy management and safety."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6"]
 

@@ -20,8 +20,9 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional, Protocol
 
-from ai_core.task_planner import (GESTURE_S, GRASP_S, RELEASE_S, ParsedGoal, Plan, Task,
-                                  TaskPlanner, parse_goal)
+from ai_core.task_planner import (GRASP_S, RELEASE_S, ParsedGoal, Plan, Task, TaskPlanner,
+                                  parse_goal)
+from motion.gesture_controller import gesture_duration_s
 from ai_core.reasoning import Reasoner
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
@@ -169,7 +170,7 @@ class LLMBrain:
             elif step == "release" and target in object_labels:
                 tasks.append(Task("release", target, RELEASE_S))
             elif step == "gesture" and target in KNOWN_GESTURES:
-                tasks.append(Task("gesture", target, GESTURE_S))
+                tasks.append(Task("gesture", target, gesture_duration_s(target)))
             elif step == "dock":
                 tasks.append(Task("dock", "dock"))
             else:

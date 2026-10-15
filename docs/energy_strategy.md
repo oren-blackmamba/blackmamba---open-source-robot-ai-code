@@ -26,11 +26,11 @@ A fraction of the pack (10 %) is a protected reserve that is never used for work
 
 ## Reference result (simulation, assumed power model)
 
-`python examples/energy_estimation.py` — a 12 h shift of ~280 requests (fetching, walking,
-gestures), seed 0: completed 12 h, about 1.6 kWh used (average ≈ 137 W), ≈ 39 % of the usable
-energy left. Continuous walking would last about 9.6 h on the same pack.
+`python examples/energy_estimation.py` — a 12 h shift of ~290 requests (fetching, walking,
+gestures, questions), seed 0: completed 12 h, about 1.6 kWh used (average ≈ 132 W), ≈ 41 % of the
+usable energy left (seeds 1 and 2 give 42 %). Continuous walking would last about 9.6 h on the same pack.
 
-The robot spends most of its time standing by (≈ 10.6 h), which is why the average is low. A
+The robot spends most of its time standing by (most of the shift), which is why the average is low. A
 workload with more walking and lifting would need a bigger pack, a lower-power design, or
 charging breaks — `RuntimePlanner.fit_duty_cycle` quantifies that trade-off.
 

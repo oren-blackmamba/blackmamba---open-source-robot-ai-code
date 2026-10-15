@@ -82,3 +82,41 @@ def test_gestures_move_joints_within_limits():
     assert actuators.positions["r_wrist"] == pytest.approx(0.0, abs=0.05)
     with pytest.raises(ValueError):
         GestureController(actuators).perform("backflip")
+
+
+# ---- minimum-jerk motion ----------------------------------------------------
+
+from motion import minimum_jerk as mj
+from motion.gesture_controller import KEYFRAMES, _motion_stats, gesture_duration_s
+
+
+def test_minimum_jerk_profile_is_smooth_and_has_the_known_peak():
+    assert mj.position(0.0, 2.0, 1.0, 0.0) == 0.0
+    assert mj.position(0.0, 2.0, 1.0, 1.0) == pytest.approx(2.0)
+    assert mj.position(0.0, 2.0, 1.0, 0.5) == pytest.approx(1.0)
+    assert mj.velocity(0.0, 2.0, 1.0, 0.0) == 0.0 and mj.velocity(0.0, 2.0, 1.0, 1.0) == 0.0
+    assert mj.velocity(0.0, 2.0, 1.0, 0.5) == pytest.approx(mj.peak_speed(2.0, 1.0))
+    assert mj.min_duration_s(1.8, 2.5) == pytest.approx(1.8 * 1.875 / 2.5)
+
+
+@pytest.mark.parametrize("name", sorted(KEYFRAMES))
+def test_every_gesture_returns_to_rest_within_joint_limits(name):
+    model = HumanoidModel.default()
+    actuators = ActuatorController(model.joint_limits())
+    result = GestureController(actuators).perform(name)
+    assert all(abs(p) < 0.02 for p in actuators.positions.values())
+    assert result.duration_s == pytest.approx(gesture_duration_s(name))
+    for joint, limit in actuators.limits.items():
+        assert limit.min_rad <= actuators.positions[joint] <= limit.max_rad
+    assert result.max_joint_speed_rad_s <= 3.0 + 1e-6
+
+
+def test_gestures_are_far_smoother_than_a_constant_speed_ramp():
+    actuators = ActuatorController(HumanoidModel.default().joint_limits())
+    smooth = GestureController(actuators).perform("wave").max_jerk_rad_s3
+    ramp_actuators = ActuatorController(HumanoidModel.default().joint_limits())
+    history = [dict(ramp_actuators.positions)]
+    for _ in range(300):                       # same joint, abrupt full-speed slew
+        history.append(dict(ramp_actuators.step({"r_shoulder_pitch": -1.8}, 0.01)))
+    _, ramp_jerk = _motion_stats(history, 0.01)
+    assert smooth < ramp_jerk / 20

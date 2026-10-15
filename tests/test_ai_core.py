@@ -6,7 +6,7 @@ from ai_core.agent import HumanisAgent
 from ai_core.decision_engine import DecisionEngine
 from ai_core.llm_brain import LLMBrain, RuleBrain
 from ai_core.memory import EpisodicMemory
-from ai_core.task_planner import parse_goal
+from ai_core.task_planner import Task, parse_goal
 from config.loader import load_config
 from control.robot_interface import SimulatedRobot
 from energy.energy_optimizer import EnergyOptimizer
@@ -17,8 +17,9 @@ ENV = HomeEnvironment()
 
 
 def make_agent(brain_factory=None):
-    robot = SimulatedRobot(CFG, start=ENV.places["desk"], dock=ENV.dock)
-    agent = HumanisAgent(robot, ENV, CFG)
+    env = HomeEnvironment()          # every test gets its own world: objects can be moved
+    robot = SimulatedRobot(CFG, start=env.places["desk"], dock=env.dock)
+    agent = HumanisAgent(robot, env, CFG)
     if brain_factory:
         agent.brain = brain_factory(agent)
     return robot, agent
@@ -48,7 +49,7 @@ def test_fetch_goal_is_completed_and_remembered():
     result = agent.handle_goal("bring me the cup from the kitchen to the living room")
     assert result.status == "completed" and result.steps_done == result.steps_total == 5
     assert agent.memory.last_sighting("cup") is not None
-    x, y = ENV.places["living_room"]
+    x, y = agent.env.places["living_room"]
     assert (robot.state().x, robot.state().y) == pytest.approx((x, y), abs=0.01)
 
 
@@ -103,7 +104,7 @@ GOOD_PLAN = {"plan": [
 
 def test_llm_brain_plan_is_executed_through_the_safety_layer():
     client = FakeClient(reply="Sure! " + json.dumps(GOOD_PLAN))
-    robot, agent = make_agent(lambda a: LLMBrain(ENV, client))
+    robot, agent = make_agent(lambda a: LLMBrain(a.env, client))
     result = agent.handle_goal("I am thirsty, put a cup in the bedroom")
     assert result.status == "completed" and result.steps_total == 5
     assert len(client.calls) == 1 and "kitchen" in client.calls[0][0]
@@ -113,7 +114,7 @@ def test_llm_brain_plan_is_executed_through_the_safety_layer():
 
 def test_llm_clarification_is_passed_through():
     client = FakeClient(reply=json.dumps({"clarification": "Which cup?"}))
-    _, agent = make_agent(lambda a: LLMBrain(ENV, client))
+    _, agent = make_agent(lambda a: LLMBrain(a.env, client))
     result = agent.handle_goal("bring the cup")
     assert result.status == "needs_clarification" and result.clarification == "Which cup?"
 
@@ -130,7 +131,7 @@ def test_invalid_llm_output_is_rejected_and_falls_back_to_rules(reply):
     brain_holder = {}
 
     def factory(agent):
-        brain_holder["b"] = LLMBrain(ENV, client, fallback=RuleBrain(ENV, agent.planner))
+        brain_holder["b"] = LLMBrain(agent.env, client, fallback=RuleBrain(agent.env, agent.planner))
         return brain_holder["b"]
 
     _, agent = make_agent(factory)
@@ -141,6 +142,70 @@ def test_invalid_llm_output_is_rejected_and_falls_back_to_rules(reply):
 
 def test_llm_outage_without_fallback_fails_safely():
     client = FakeClient(error=ConnectionError("offline"))
-    robot, agent = make_agent(lambda a: LLMBrain(ENV, client))
+    robot, agent = make_agent(lambda a: LLMBrain(a.env, client))
     result = agent.handle_goal("go to the kitchen")
     assert result.status == "failed" and robot.state().distance_m == 0.0
+
+
+# ---- persistent world and dialogue -----------------------------------------
+
+def test_carried_objects_really_move_and_are_found_at_their_new_place():
+    robot, agent = make_agent()
+    assert agent.handle_goal("bring the cup from the kitchen to the living room").status == "completed"
+    assert agent.env.object_place("cup") == "living_room"
+    cup = next(o for o in agent.env.world_objects() if o[0] == "cup")
+    assert cup[1:] == pytest.approx(agent.env.places["living_room"], abs=0.01)   # where the robot put it
+    # the robot now finds the cup in the living room, not in the kitchen
+    result = agent.handle_goal("bring the cup to the bedroom")
+    assert result.status == "completed" and agent.env.object_place("cup") == "bedroom"
+
+
+def test_a_failed_task_never_leaves_an_object_stuck_in_the_hand():
+    robot, agent = make_agent()
+    agent._grasp(Task("grasp", "cup", 8.0))
+    assert agent.env.object_place("cup") == "carried"
+    agent._drop_if_carrying()
+    assert agent.env.object_place("cup") != "carried"
+    assert ("cup" in [o[0] for o in agent.env.world_objects()])
+
+
+def test_where_is_questions_are_answered_in_both_languages_without_moving():
+    robot, agent = make_agent()
+    en = agent.handle_goal("where is the cup?")
+    he = agent.handle_goal("איפה הכוס?")
+    assert en.status == he.status == "answered"
+    assert "kitchen" in en.message and "במטבח" in he.message
+    assert robot.state().distance_m == 0.0
+
+
+def test_the_robot_knows_what_it_has_moved():
+    _, agent = make_agent()
+    agent.handle_goal("bring the book to the bedroom")
+    assert "bedroom" in agent.handle_goal("where is the book?").message
+
+
+def test_follow_up_with_a_pronoun_refers_to_the_last_object():
+    robot, agent = make_agent()
+    agent.handle_goal("where is the toolbox?")
+    result = agent.handle_goal("bring it to the living room")
+    assert result.status == "completed" and agent.env.object_place("toolbox") == "living_room"
+    robot2, agent2 = make_agent()
+    agent2.handle_goal("איפה הספר?")
+    assert agent2.handle_goal("תביא אותו לחדר שינה").status == "completed"
+    assert agent2.env.object_place("book") == "bedroom"
+
+
+def test_pronoun_without_context_asks_what_to_bring():
+    _, agent = make_agent()
+    assert agent.handle_goal("bring it to the kitchen").status == "needs_clarification"
+
+
+def test_battery_and_history_questions():
+    _, agent = make_agent()
+    agent.handle_goal("wave hello")
+    battery = agent.handle_goal("how much battery do you have?")
+    assert battery.status == "answered" and "%" in battery.message and "hours" in battery.message
+    assert agent.handle_goal("כמה סוללה נשארה?").status == "answered"
+    assert "wave hello" in agent.handle_goal("what did you do?").message
+    assert agent.handle_goal("thank you").message == "You're welcome!"
+    assert agent.handle_goal("go charge the battery").status != "answered"

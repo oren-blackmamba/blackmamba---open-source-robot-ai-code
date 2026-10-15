@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from ai_core.decision_engine import DecisionEngine
+from ai_core.dialogue import DialogueManager
 from ai_core.memory import EpisodicMemory
 from ai_core.llm_brain import Brain, RuleBrain
 from ai_core.reasoning import Reasoner
@@ -23,7 +24,7 @@ PLANNING_S = 2.0   # compute time spent understanding and planning each goal
 @dataclass
 class GoalResult:
     goal: str
-    status: str            # completed | failed | needs_clarification | deferred_low_energy
+    status: str            # completed | answered | failed | needs_clarification | deferred_low_energy
     message: str
     duration_s: float = 0.0
     energy_wh: float = 0.0
@@ -53,6 +54,9 @@ class HumanisAgent:
         self.camera = SimulatedCamera(env.world_objects(), seed=seed)
         self.detector = ObjectDetector()
         self.allow_charging = allow_charging
+        self.dialogue = DialogueManager(env, self.memory, self.estimator, self.robot.state)
+        self._carrying: Optional[str] = None
+        self._at_place: Optional[str] = None
         # The brain only proposes plans. It can be a language model; the safety and
         # energy layers below still check everything it proposes.
         self.brain: Brain = brain or RuleBrain(env, self.planner)
@@ -60,10 +64,13 @@ class HumanisAgent:
     def _understand(self, goal: str) -> tuple[Optional[Plan], Optional[str]]:
         """Ask the brain for a plan. Returns (plan, clarification question)."""
         state = self.robot.state()
+        resolved = self.dialogue.resolve(goal)          # "bring it" -> "bring the cup"
         context = {"place": self._nearest_place(state.x, state.y),
-                   "soc_pct": round(100 * state.soc)}
-        proposal = self.brain.propose(goal, context)
+                   "soc_pct": round(100 * state.soc),
+                   "last_object": self.dialogue.last.obj}
+        proposal = self.brain.propose(resolved, context)
         self.memory.add(state.time_s, "brain", f"{goal} via {proposal.source or 'brain'}")
+        self.dialogue.remember_turn(proposal.plan, goal)
         return proposal.plan, proposal.clarification
 
     def _nearest_place(self, x: float, y: float) -> str:
@@ -76,6 +83,10 @@ class HumanisAgent:
         thought = self._cmd("stand", duration_s=PLANNING_S, ai_load=1.0)
         if not thought.ok:
             return self._finish(goal, start, "failed", thought.reason)
+
+        reply = self.dialogue.answer(goal)              # questions are answered, not executed
+        if reply:
+            return self._finish(goal, start, "answered", reply)
 
         plan, clarification = self._understand(goal)
         if clarification:
@@ -97,6 +108,7 @@ class HumanisAgent:
         for task in plan.tasks:
             ok, reason = self._execute(task)
             if not ok:
+                self._drop_if_carrying()
                 return self._finish(goal, start, "failed", f"{task.kind}: {reason}",
                                     steps_done=done, steps_total=len(plan.tasks))
             done += 1
@@ -112,8 +124,10 @@ class HumanisAgent:
             return self._navigate(task.target)
         if task.kind == "scan":
             return self._scan(task.target)
-        if task.kind in ("grasp", "release"):
-            return self._ok(self._cmd("manipulate", duration_s=task.duration_s))
+        if task.kind == "grasp":
+            return self._grasp(task)
+        if task.kind == "release":
+            return self._release(task)
         if task.kind == "gesture":
             return self._ok(self._cmd("gesture", duration_s=task.duration_s))
         if task.kind == "dock":
@@ -123,6 +137,36 @@ class HumanisAgent:
     @staticmethod
     def _ok(result: CommandResult) -> tuple[bool, str]:
         return result.ok, result.reason
+
+    def _grasp(self, task: Task) -> tuple[bool, str]:
+        result = self._cmd("manipulate", duration_s=task.duration_s)
+        if not result.ok:
+            return False, result.reason
+        state = self.robot.state()
+        self.env.pick_up(task.target, state.x, state.y)
+        self.camera.set_objects(self.env.world_objects())
+        self._carrying = task.target
+        return True, ""
+
+    def _release(self, task: Task) -> tuple[bool, str]:
+        result = self._cmd("manipulate", duration_s=task.duration_s)
+        if not result.ok:
+            return False, result.reason
+        self._put_down(task.target)
+        return True, ""
+
+    def _put_down(self, label: str) -> None:
+        state = self.robot.state()
+        place = self.env.put_down(label, state.x, state.y)
+        self.camera.set_objects(self.env.world_objects())
+        self.memory.remember_sighting(label, state.x, state.y, state.time_s)
+        self.memory.add(state.time_s, "world", f"put the {label} in the {place}", (label, place))
+        self._carrying = None
+
+    def _drop_if_carrying(self) -> None:
+        """A failed task must not leave an object stuck in the robot's hand."""
+        if self._carrying:
+            self._put_down(self._carrying)
 
     def _navigate(self, place: str) -> tuple[bool, str]:
         state = self.robot.state()

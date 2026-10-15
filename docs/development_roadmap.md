@@ -4,14 +4,15 @@ Status as of this commit. "Done" means working code with tests in simulation.
 
 ## Phase 1 — Software foundation: done
 Module interfaces, agent and task planner (Hebrew/English), pluggable LLM brain, configuration,
-55 automated tests, documentation.
+67 automated tests, documentation.
 
 ## Phase 2 — Perception and simulation: started
 Done: simulated camera, detections, occupancy grid, sensor fusion filters, indoor environment.
 Next: physics simulator backend (MuJoCo), real humanoid model (URDF), real camera pipeline.
 
 ## Phase 3 — Movement and control: started
-Done: A* planner, gait footsteps, linear-inverted-pendulum balance, gestures, joint limits.
+Done: A* planner, gait footsteps, linear-inverted-pendulum balance, minimum-jerk gestures (the
+profile of human reaching), joint limits.
 Next: full-body walking controller, whole-body balance, grasp planning, imitation learning.
 
 ## Phase 4 — Energy intelligence: started

@@ -8,9 +8,10 @@ from typing import Optional
 
 from energy.energy_optimizer import EnergyOptimizer
 from energy.power_estimator import PowerEstimator
+from motion.gesture_controller import gesture_duration_s
 from motion.motion_planner import MotionPlanner
 
-SCAN_S, GRASP_S, RELEASE_S, GESTURE_S = 3.0, 8.0, 4.0, 6.0
+SCAN_S, GRASP_S, RELEASE_S = 3.0, 8.0, 4.0
 DEFAULT_DESTINATION = "desk"
 
 FETCH_WORDS = ["bring", "fetch", "הבא", "תביא", "קח"]
@@ -31,6 +32,9 @@ def _find(text: str, aliases: list[str]) -> Optional[int]:
         if index >= 0 and (best is None or index < best):
             best = index
     return best
+
+
+find_alias = _find
 
 
 @dataclass
@@ -106,7 +110,8 @@ class TaskPlanner:
         elif parsed.intent == "go" and parsed.places:
             tasks = [Task("navigate", parsed.places[-1])]
         elif parsed.intent == "gesture":
-            tasks = [Task("gesture", parsed.gesture or "wave", GESTURE_S)]
+            gesture = parsed.gesture or "wave"
+            tasks = [Task("gesture", gesture, gesture_duration_s(gesture))]
         elif parsed.intent == "charge":
             tasks = [Task("dock", "dock")]
         else:

@@ -30,6 +30,11 @@ GOAL_POOL = [
     "wave hello",
     "נופף לשלום",
     "do something",
+    "where is the cup?",
+    "איפה הספר?",
+    "כמה סוללה נשארה?",
+    "bring it to the desk",
+    "תודה",
 ]
 
 
