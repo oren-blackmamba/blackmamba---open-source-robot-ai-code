@@ -129,7 +129,7 @@ class HumanisAgent:
         if task.kind == "release":
             return self._release(task)
         if task.kind == "gesture":
-            return self._ok(self._cmd("gesture", duration_s=task.duration_s))
+            return self._ok(self._cmd("gesture", name=task.target, duration_s=task.duration_s))
         if task.kind == "dock":
             return self._recharge()
         return False, f"unknown task {task.kind}"

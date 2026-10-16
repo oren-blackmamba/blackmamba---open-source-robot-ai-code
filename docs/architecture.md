@@ -47,6 +47,13 @@ The model name comes from `HUMANIS_LLM_MODEL`.
 - `ai_core.llm_brain.Brain` — `propose(goal, context) -> BrainProposal`.
 - `ai_core.llm_brain.LLMClient` — `complete(system, user) -> str`; any model provider.
 
+## Physics backend
+
+`simulation/mujoco_backend.py` provides `MuJoCoRobot`, a `RobotInterface` driven by MuJoCo rigid-body
+physics (standing, gestures, pushes, electrical power from joint torques). It reuses the safety
+monitor, battery and agent unchanged and refuses walking and grasping, which are not implemented
+yet. See [mujoco.md](mujoco.md).
+
 ## What is modelled and what is not
 
 The world is persistent: objects the robot carries really move, so later requests and questions

@@ -41,3 +41,8 @@ sim:
 
 targets:
   operating_hours: 12
+
+mujoco:                    # physics backend (all ASSUMED, see simulation/mujoco_backend.py)
+  control_dt_s: 0.01
+  motor_efficiency: 0.8
+  driver_quiescent_w_per_joint: 1.5

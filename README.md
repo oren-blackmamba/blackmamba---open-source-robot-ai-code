@@ -481,13 +481,14 @@ These commands describe the intended setup workflow. They will become fully usab
 
 **Project stage:** Working software foundation, running in simulation (no physical hardware yet).
 
-**Implemented and tested (67 automated tests):**
+**Implemented and tested (81 automated tests):**
 
 - AI core: goal understanding in Hebrew and English, task planning, a dialogue manager (answers questions such as "where is the cup?" and understands follow-ups such as "bring it to the kitchen"), clarification questions, episodic memory, and a pluggable language-model brain (`ai_core/llm_brain.py`) whose output is validated before use.
 - Perception: simulated camera, object detection, occupancy-grid mapping, sensor-fusion filters.
 - Motion: A* path planning, gait generation, balance control model, and minimum-jerk gestures (the smooth speed profile of human reaching) within joint limits.
 - Energy: battery model with protected reserve, per-activity power model, energy-aware decisions, runtime planning.
 - Safety: command validation, latched emergency stop, state monitoring, watchdog.
+- Physics: an optional MuJoCo backend with a human-proportioned 70 kg body and 19 joints. Standing, gestures, push tests and physics-based power run in real rigid-body physics ([docs/mujoco.md](docs/mujoco.md)). Walking and grasping are not implemented yet and are refused rather than faked.
 - Simulation: an indoor environment where carried objects really move and are remembered, and a full 12-hour work-shift scenario.
 
 Try it:
@@ -497,6 +498,7 @@ pip install -e ".[dev]"
 python -m pytest
 python examples/basic_agent.py
 python examples/energy_estimation.py
+pip install mujoco && python examples/mujoco_demo.py   # optional physics backend
 ```
 
 The 12-hour shift completes in simulation **using assumed power values** in `config/robot_config.yaml`. See [docs/energy_strategy.md](docs/energy_strategy.md). Anything not listed above remains a plan.

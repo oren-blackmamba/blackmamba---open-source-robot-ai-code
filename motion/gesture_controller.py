@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable, Optional
 
 from control.actuator_controller import ActuatorController
 from motion import minimum_jerk
@@ -53,7 +54,10 @@ class GestureController:
         self.actuators = actuators
         self.dt = dt
 
-    def perform(self, name: str) -> GestureResult:
+    def perform(self, name: str, on_step: Optional[Callable[[dict[str, float], float], None]] = None
+                ) -> GestureResult:
+        """Run a gesture. ``on_step(commanded_positions, dt)`` is called every control tick,
+        so a physics engine can follow the motion."""
         end_time = gesture_duration_s(name)
 
         # Build segments (t_start, t_end, {joint: (from, to)}). A joint starts each segment
@@ -78,6 +82,8 @@ class GestureController:
                     for joint, (x0, x1) in moves.items():
                         desired[joint] = minimum_jerk.position(x0, x1, t1 - t0, t - t0)
             self.actuators.step(desired, self.dt)
+            if on_step is not None:
+                on_step(dict(self.actuators.positions), self.dt)
             history.append(dict(self.actuators.positions))
             if tick % 5 == 0:
                 trajectory.append((round(t, 3), dict(self.actuators.positions)))
