@@ -8,7 +8,7 @@ from typing import Any, Optional
 from ai_core.decision_engine import DecisionEngine
 from ai_core.dialogue import DialogueManager
 from ai_core.memory import EpisodicMemory
-from ai_core.llm_brain import Brain, RuleBrain
+from ai_core.llm_brain import Brain, build_default_brain
 from ai_core.reasoning import Reasoner
 from ai_core.task_planner import SCAN_S, Plan, Task, TaskPlanner
 from control.robot_interface import Command, CommandResult, RobotInterface
@@ -59,7 +59,9 @@ class HumanisAgent:
         self._at_place: Optional[str] = None
         # The brain only proposes plans. It can be a language model; the safety and
         # energy layers below still check everything it proposes.
-        self.brain: Brain = brain or RuleBrain(env, self.planner)
+        # Prefer a local Ollama model when available. If it is not running, the
+        # deterministic rule brain works without internet or an API key.
+        self.brain: Brain = brain or build_default_brain(env, self.planner)
 
     def _understand(self, goal: str) -> tuple[Optional[Plan], Optional[str]]:
         """Ask the brain for a plan. Returns (plan, clarification question)."""
@@ -67,7 +69,8 @@ class HumanisAgent:
         resolved = self.dialogue.resolve(goal)          # "bring it" -> "bring the cup"
         context = {"place": self._nearest_place(state.x, state.y),
                    "soc_pct": round(100 * state.soc),
-                   "last_object": self.dialogue.last.obj}
+                   "last_object": self.dialogue.last.obj,
+                   "recent_events": [episode.text for episode in self.memory.last(5)]}
         proposal = self.brain.propose(resolved, context)
         self.memory.add(state.time_s, "brain", f"{goal} via {proposal.source or 'brain'}")
         self.dialogue.remember_turn(proposal.plan, goal)

@@ -509,6 +509,22 @@ Our goal is to make progress measurable, reproducible, and open to technical rev
 
 ---
 
+### Offline-first AI brain
+
+The default AI brain now prefers a local Ollama model and falls back to the built-in rule-based
+brain if the local model is unavailable. Runtime inference can work without internet once the
+model has been installed locally. Set `HUMANIS_BRAIN_MODE=rules` for a strict no-model,
+no-network mode. The model is restricted to a loopback endpoint, and proposed actions are
+validated before execution.
+
+Setup, environment variables, limitations, and offline testing instructions:
+[Offline Cognitive Brain](docs/offline_brain.md).
+
+This improves local reasoning and conversational context; it is not a claim of human-level
+intelligence. The rule fallback supports only the intents currently implemented in HUMANIS.
+
+---
+
 ## 🌟 14. Long-Term Goal
 
 We envision a future in which intelligent humanoid robots can learn new skills, understand complex environments, interact naturally with people, perform useful physical tasks, and manage their resources efficiently.
