@@ -209,3 +209,47 @@ def test_battery_and_history_questions():
     assert "wave hello" in agent.handle_goal("what did you do?").message
     assert agent.handle_goal("thank you").message == "You're welcome!"
     assert agent.handle_goal("go charge the battery").status != "answered"
+
+
+
+# ---- local-first cognitive brain and plan invariants ------------------------
+
+def test_llm_plan_cannot_grasp_without_scanning_first():
+    brain = LLMBrain(ENV, FakeClient())
+    tasks, error = brain.validate_steps([
+        {"step": "navigate", "target": "kitchen"},
+        {"step": "grasp", "target": "cup"},
+        {"step": "release", "target": "cup"},
+    ])
+    assert tasks == []
+    assert "scan" in error
+
+
+def test_llm_plan_cannot_release_an_object_it_is_not_carrying():
+    brain = LLMBrain(ENV, FakeClient())
+    tasks, error = brain.validate_steps([{"step": "release", "target": "cup"}])
+    assert tasks == []
+    assert "carrying" in error
+
+
+def test_llm_plan_must_finish_with_empty_hands():
+    brain = LLMBrain(ENV, FakeClient())
+    tasks, error = brain.validate_steps([
+        {"step": "scan", "target": "cup"},
+        {"step": "grasp", "target": "cup"},
+    ])
+    assert tasks == []
+    assert "release" in error
+
+
+def test_local_ollama_client_rejects_non_loopback_hosts():
+    from ai_core.llm_brain import OllamaClient
+    with pytest.raises(ValueError, match="local loopback"):
+        OllamaClient(base_url="http://example.com:11434")
+
+
+def test_default_brain_can_be_forced_to_rules_without_network(monkeypatch):
+    from ai_core.llm_brain import RuleBrain, build_default_brain
+    monkeypatch.setenv("HUMANIS_BRAIN_MODE", "rules")
+    brain = build_default_brain(ENV, make_agent()[1].planner)
+    assert isinstance(brain, RuleBrain)
