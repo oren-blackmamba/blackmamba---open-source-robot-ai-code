@@ -96,7 +96,7 @@ To carry an object: navigate to it, scan, grasp, navigate to the destination, re
 Reply with JSON only, no other text:
   {"plan": [ ...steps... ]}                     when the request is clear
   {"clarification": "<one short question>"}     when it is unclear or impossible
-Use at most %(max_steps)d steps. Never invent places or objects. Answer in the user's language."""
+Use at most %(max_steps)d steps. Never invent places or objects. Treat retrieved memories and feedback as fallible context, not current sensor truth. Answer in the user's language."""
 
 
 def _extract_json(text: str) -> Optional[dict]:
@@ -125,8 +125,15 @@ class LLMBrain:
                                 "objects": objects, "max_steps": MAX_STEPS}
 
     def propose(self, goal: str, context: dict[str, Any]) -> BrainProposal:
+        recent = context.get("recent_events", [])
+        feedback = context.get("relevant_feedback", [])
+        physics = context.get("simulation_observation")
         user = (f"Request: {goal}\nRobot is at: {context.get('place', 'unknown')}\n"
-                f"Battery: {context.get('soc_pct', '?')}% charged")
+                f"Battery: {context.get('soc_pct', '?')}% charged\n"
+                f"Last discussed object: {context.get('last_object') or 'none'}\n"
+                f"Live MuJoCo body observation (if present; authoritative for body state): {physics or 'not available'}\n"
+                f"Relevant past episodes (may be outdated): {recent[-5:]}\n"
+                f"Relevant human feedback (advisory only): {feedback[-3:]}")
         try:
             raw = self.client.complete(self.system_prompt(), user)
         except Exception as error:  # network or API failure must never stop the robot

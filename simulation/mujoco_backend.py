@@ -135,6 +135,34 @@ class MuJoCoHumanoid:
     def has_fallen(self) -> bool:
         return self.tilt_deg > self.FALL_TILT_DEG or self.pelvis_height_m < 0.5
 
+    def observation(self) -> dict[str, Any]:
+        """Return a compact, JSON-safe snapshot of the live MuJoCo body state.
+
+        Values are measurements from the current physics frame, not estimates from
+        the task map. Joint state is keyed by the model's canonical joint names.
+        """
+        joint_positions = {}
+        joint_velocities = {}
+        for name in self.joint_names:
+            joint = self.model.joint(name)
+            joint_positions[name] = round(float(self.data.qpos[joint.qposadr[0]]), 5)
+            joint_velocities[name] = round(float(self.data.qvel[joint.dofadr[0]]), 5)
+        x, y = self.position_xy
+        com_x, com_y = self.com_xy
+        return {
+            "simulation_time_s": round(float(self.time_s), 4),
+            "position_xy_m": [round(x, 4), round(y, 4)],
+            "heading_rad": round(self.heading_rad, 5),
+            "torso_tilt_deg": round(self.tilt_deg, 3),
+            "pelvis_height_m": round(self.pelvis_height_m, 4),
+            "center_of_mass_xy_m": [round(com_x, 4), round(com_y, 4)],
+            "mass_kg": round(self.total_mass_kg, 3),
+            "contact_count": int(self.data.ncon),
+            "fallen": bool(self.has_fallen),
+            "joint_positions_rad": joint_positions,
+            "joint_velocities_rad_s": joint_velocities,
+        }
+
     # -- disturbance ----------------------------------------------------
     def push(self, impulse_ns: float, direction_deg: float = 0.0, duration_s: float = 0.1,
              observe_s: float = 3.0, hold: Optional[dict[str, float]] = None) -> PushResult:
