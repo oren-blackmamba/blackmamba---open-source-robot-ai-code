@@ -73,6 +73,17 @@ class HumanisAgent:
                    "recent_events": [e.text for e in self.memory.recall(resolved, k=5)],
                    "relevant_feedback": (self.memory.relevant_feedback(resolved, k=3)
                                          if hasattr(self.memory, "relevant_feedback") else [])}
+        # Physics observations are optional: the same agent remains compatible with
+        # the lightweight simulator, while MuJoCo contributes measured body state.
+        body = getattr(self.robot, "body", None)
+        observe = getattr(body, "observation", None)
+        if callable(observe):
+            physics_state = observe()
+            context["simulation_observation"] = physics_state
+            self.memory.add(state.time_s, "simulation",
+                            f"MuJoCo state: tilt={physics_state['torso_tilt_deg']} deg, "
+                            f"height={physics_state['pelvis_height_m']} m, "
+                            f"fallen={physics_state['fallen']}")
         proposal = self.brain.propose(resolved, context)
         self.memory.add(state.time_s, "brain", f"{goal} via {proposal.source or 'brain'}")
         self.dialogue.remember_turn(proposal.plan, goal)
