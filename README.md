@@ -509,6 +509,15 @@ Our goal is to make progress measurable, reproducible, and open to technical rev
 
 ---
 
+## 🧠 Offline Brain and Long-Term Learning
+
+The default brain can use a local Ollama model with no hosted inference dependency. HUMANIS can also persist episodic memory and explicit human feedback in SQLite, then retrieve relevant experience for later planning prompts.
+
+- Local model setup: [Offline Brain](docs/offline_brain.md)
+- Persistent memory and feedback: [Long-Term Learning](docs/long_term_learning.md)
+
+Persistent memory is enabled only when `HUMANIS_MEMORY_DB` is configured. Without it, the existing in-memory behavior remains unchanged. Stored feedback informs later prompts but does not automatically fine-tune model weights. All proposed actions continue through the existing plan, energy, and safety checks.
+
 ## 🌟 14. Long-Term Goal
 
 We envision a future in which intelligent humanoid robots can learn new skills, understand complex environments, interact naturally with people, perform useful physical tasks, and manage their resources efficiently.
