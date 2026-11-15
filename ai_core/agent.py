@@ -8,7 +8,9 @@ from typing import Any, Optional
 from ai_core.decision_engine import DecisionEngine
 from ai_core.dialogue import DialogueManager
 from ai_core.memory import EpisodicMemory
-from ai_core.llm_brain import Brain, RuleBrain
+from ai_core.llm_brain import Brain
+from ai_core.local_model import build_default_brain
+from ai_core.long_term_memory import build_default_memory
 from ai_core.reasoning import Reasoner
 from ai_core.task_planner import SCAN_S, Plan, Task, TaskPlanner
 from control.robot_interface import Command, CommandResult, RobotInterface
@@ -50,7 +52,7 @@ class HumanisAgent:
                                    self.max_walk_speed)
         self.reasoner = Reasoner(env)
         self.decision = DecisionEngine(self.optimizer)
-        self.memory = memory or EpisodicMemory()
+        self.memory = memory if memory is not None else build_default_memory()
         self.camera = SimulatedCamera(env.world_objects(), seed=seed)
         self.detector = ObjectDetector()
         self.allow_charging = allow_charging
@@ -59,7 +61,7 @@ class HumanisAgent:
         self._at_place: Optional[str] = None
         # The brain only proposes plans. It can be a language model; the safety and
         # energy layers below still check everything it proposes.
-        self.brain: Brain = brain or RuleBrain(env, self.planner)
+        self.brain: Brain = brain or build_default_brain(env, self.planner)
 
     def _understand(self, goal: str) -> tuple[Optional[Plan], Optional[str]]:
         """Ask the brain for a plan. Returns (plan, clarification question)."""
@@ -67,11 +69,24 @@ class HumanisAgent:
         resolved = self.dialogue.resolve(goal)          # "bring it" -> "bring the cup"
         context = {"place": self._nearest_place(state.x, state.y),
                    "soc_pct": round(100 * state.soc),
-                   "last_object": self.dialogue.last.obj}
+                   "last_object": self.dialogue.last.obj,
+                   "recent_events": [e.text for e in self.memory.recall(resolved, k=5)],
+                   "relevant_feedback": (self.memory.relevant_feedback(resolved, k=3)
+                                         if hasattr(self.memory, "relevant_feedback") else [])}
         proposal = self.brain.propose(resolved, context)
         self.memory.add(state.time_s, "brain", f"{goal} via {proposal.source or 'brain'}")
         self.dialogue.remember_turn(proposal.plan, goal)
         return proposal.plan, proposal.clarification
+
+    def record_feedback(self, goal: str, rating: int, correction: str = "") -> None:
+        """Record explicit human feedback for future context retrieval.
+
+        This stores feedback; it does not update neural-network weights.
+        """
+        store = getattr(self.memory, "add_feedback", None)
+        if not callable(store):
+            raise RuntimeError("Enable persistent memory with HUMANIS_MEMORY_DB to store feedback")
+        store(goal, rating, correction)
 
     def _nearest_place(self, x: float, y: float) -> str:
         return min(self.env.places, key=lambda name: (self.env.places[name][0] - x) ** 2
