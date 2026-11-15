@@ -37,6 +37,19 @@ def test_model_has_human_proportions_and_the_software_joints():
     assert body.data.xpos[head][2] + 0.24 == pytest.approx(1.74, abs=0.02)    # head top
 
 
+def test_live_observation_exposes_physics_and_joint_state():
+    body = settled()
+    observation = body.observation()
+    assert observation["simulation_time_s"] == pytest.approx(body.time_s)
+    assert observation["position_xy_m"] == pytest.approx(body.position_xy)
+    assert observation["torso_tilt_deg"] == pytest.approx(body.tilt_deg)
+    assert observation["pelvis_height_m"] == pytest.approx(body.pelvis_height_m)
+    assert observation["fallen"] is body.has_fallen
+    assert set(observation["joint_positions_rad"]) == set(body.joint_names)
+    assert set(observation["joint_velocities_rad_s"]) == set(body.joint_names)
+    assert isinstance(observation["contact_count"], int)
+
+
 def test_the_model_can_be_exported_for_the_viewer(tmp_path):
     path = write_mjcf(str(tmp_path / "humanis.xml"))
     assert "<mujoco" in open(path, encoding="utf-8").read() and build_mjcf().count("<position") == 19
