@@ -127,9 +127,11 @@ class LLMBrain:
     def propose(self, goal: str, context: dict[str, Any]) -> BrainProposal:
         recent = context.get("recent_events", [])
         feedback = context.get("relevant_feedback", [])
+        physics = context.get("simulation_observation")
         user = (f"Request: {goal}\nRobot is at: {context.get('place', 'unknown')}\n"
                 f"Battery: {context.get('soc_pct', '?')}% charged\n"
                 f"Last discussed object: {context.get('last_object') or 'none'}\n"
+                f"Live MuJoCo body observation (if present; authoritative for body state): {physics or 'not available'}\n"
                 f"Relevant past episodes (may be outdated): {recent[-5:]}\n"
                 f"Relevant human feedback (advisory only): {feedback[-3:]}")
         try:
