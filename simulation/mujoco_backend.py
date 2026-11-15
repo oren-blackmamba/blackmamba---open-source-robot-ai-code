@@ -151,7 +151,8 @@ class MuJoCoHumanoid:
         com_x, com_y = self.com_xy
         return {
             "simulation_time_s": round(float(self.time_s), 4),
-            "position_xy_m": [round(x, 4), round(y, 4)],
+            # Preserve the physics engine precision; consumers can round for display.
+            "position_xy_m": [float(x), float(y)],
             "heading_rad": round(self.heading_rad, 5),
             "torso_tilt_deg": round(self.tilt_deg, 3),
             "pelvis_height_m": round(self.pelvis_height_m, 4),
