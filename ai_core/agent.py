@@ -222,5 +222,5 @@ class HumanisAgent:
         result = GoalResult(goal, status, message, end.time_s - start.time_s,
                             end.total_drawn_wh - start.total_drawn_wh, steps_done, steps_total,
                             clarification)
-        self.memory.add(end.time_s, "goal", f"{goal} -> {status}", (status,))
+        self.memory.add(end.time_s, "goal", f"{goal} -> {status}: {message}", (status,))
         return result
